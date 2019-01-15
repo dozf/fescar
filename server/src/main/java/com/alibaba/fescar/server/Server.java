@@ -27,6 +27,9 @@ import com.alibaba.fescar.core.rpc.netty.RpcServer;
 import com.alibaba.fescar.server.coordinator.DefaultCoordinator;
 import com.alibaba.fescar.server.session.SessionHolder;
 
+/**
+ * Transaction Coordinator (TC)： 事务协调器，维护全局事务的运行状态，负责协调并驱动全局事务的提交或回滚。
+ */
 public class Server {
 
     private static final ThreadPoolExecutor WORKING_THREADS = new ThreadPoolExecutor(100, 500, 500, TimeUnit.SECONDS,
