@@ -54,6 +54,11 @@ public class PreparedStatementProxy extends AbstractPreparedStatementProxy imple
         });
     }
 
+    /**
+     * 执行select 类型的SQL
+     * @return
+     * @throws SQLException
+     */
     @Override
     public ResultSet executeQuery() throws SQLException {
         return ExecuteTemplate.execute(this, new StatementCallback<ResultSet, PreparedStatement>() {
@@ -64,6 +69,11 @@ public class PreparedStatementProxy extends AbstractPreparedStatementProxy imple
         });
     }
 
+    /**
+     * 执行update 类型的SQL
+     * @return
+     * @throws SQLException
+     */
     @Override
     public int executeUpdate() throws SQLException {
         return ExecuteTemplate.execute(this, new StatementCallback<Integer, PreparedStatement>() {

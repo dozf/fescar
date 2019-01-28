@@ -37,6 +37,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionProxy.class);
 
+    /**
+     * 代理连接上下文
+     */
     private ConnectionContext context = new ConnectionContext();
 
     public ConnectionProxy(DataSourceProxy dataSourceProxy, Connection targetConnection, String dbType) {
@@ -91,6 +94,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         if (sqlType == SQLType.DELETE) {
             lockKeyRecords = beforeImage;
         }
+        //根据记录的主键，构建本地事务锁的key
         String lockKeys = buildLockKey(lockKeyRecords);
         context.appendLockKey(lockKeys);
         SQLUndoLog sqlUndoLog = buildUndoItem(sqlType, tableName, beforeImage, afterImage);
@@ -130,6 +134,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     public void commit() throws SQLException {
         if (context.inGlobalTransaction()) {
             try {
+                // 注册分支事务
                 register();
             } catch (TransactionException e) {
                 recognizeLockKeyConflictException(e);
@@ -156,7 +161,12 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         }
     }
 
+    /**
+     * 注册分支事务
+     * @throws TransactionException
+     */
     private void register() throws TransactionException {
+        // 通过DataSourceManager 向TC 发送一个注册分支事务的请求（TC 会生成一个全局事务锁）
         Long branchId = DataSourceManager.get().branchRegister(BranchType.AT, getDataSourceProxy().getResourceId(),
                 null, context.getXid(), context.buildLockKeys());
         context.setBranchId(branchId);
@@ -181,6 +191,11 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         targetConnection.setAutoCommit(autoCommit);
     }
 
+    /**
+     * 一阶段提交回复(分支事务提交的回复)
+     * @param commitDone
+     * @throws SQLException
+     */
     private void report(boolean commitDone) throws SQLException {
         int retry = 5; // TODO: configure
         while (retry > 0) {

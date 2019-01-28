@@ -92,6 +92,10 @@ public class ConnectionContext {
         sqlUndoItemsBuffer.clear();
     }
 
+    /**
+     * 构建全局锁的key
+     * @return
+     */
     public String buildLockKeys() {
         if (lockKeysBuffer.isEmpty()) {
             return null;

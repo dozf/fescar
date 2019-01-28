@@ -44,28 +44,39 @@ public class GlobalTransactionalInterceptor implements MethodInterceptor {
         this.failureHandler = failureHandler;
     }
 
+    /**
+     * 拦截 @GlobalTransactional注解
+     * @param methodInvocation
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(final MethodInvocation methodInvocation) throws Throwable {
         final GlobalTransactional anno = getAnnotation(methodInvocation.getMethod());
         if (anno != null) {
             try {
+                // 通过transactionalTemplate 对被注解了@GlobalTransactional 的方法按分布式事务方式执行
                 return transactionalTemplate.execute(new TransactionalExecutor() {
+                    // 执行业务原始方法
                     @Override
                     public Object execute() throws Throwable {
                         return methodInvocation.proceed();
                     }
 
+                    //获取@GlobalTransactional注解中的timeoutMills 属性值
                     @Override
                     public int timeout() {
                         return anno.timeoutMills();
                     }
 
+                    //获取@GlobalTransactional注解中的name 属性值
                     @Override
                     public String name() {
                         String name = anno.name();
                         if (!StringUtils.isEmpty(name)) {
                             return name;
                         }
+                        // name 属性值为空，则使用方法名
                         return formatMethod(methodInvocation.getMethod());
                     }
                 });
@@ -90,6 +101,8 @@ public class GlobalTransactionalInterceptor implements MethodInterceptor {
             }
 
         }
+
+        //没有被注解@GlobalTransactional的方法 执行原方法
         return methodInvocation.proceed();
     }
 

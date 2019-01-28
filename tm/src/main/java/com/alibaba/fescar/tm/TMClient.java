@@ -19,6 +19,7 @@ package com.alibaba.fescar.tm;
 import com.alibaba.fescar.core.rpc.netty.TmRpcClient;
 
 /**
+ * TM客户端
  * The type Tm client.
  */
 public class TMClient {
@@ -30,6 +31,7 @@ public class TMClient {
      * @param transactionServiceGroup the transaction service group
      */
     public static void init(String applicationId, String transactionServiceGroup) {
+        //创建 一个TM 的netty 客户端
         TmRpcClient tmRpcClient = TmRpcClient.getInstance(applicationId, transactionServiceGroup);
         tmRpcClient.init();
     }

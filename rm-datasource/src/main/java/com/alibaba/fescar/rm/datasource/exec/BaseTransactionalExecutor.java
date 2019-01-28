@@ -46,7 +46,13 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
     @Override
     public Object execute(Object... args) throws Throwable {
         String xid = RootContext.getXID();
+        //给代理Connection 绑定上xid
         statementProxy.getConnectionProxy().bind(xid);
+        /**
+            具体的SQL执行器(如：InsertExecutor、DeleteExecutor、UpdateExecutor，他们的父类AbstractDMLBaseExecutor )来执行sql。
+            执行sql时，会解析出sql执行前的镜像 beforeImage ，用于全局事务回滚。同时也会解析出afterImage(感觉对回滚没什么用，用于记录sql而已)
+            并把镜像内容插入undo_log表
+         */
         return doExecute(args);
     }
 

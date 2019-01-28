@@ -29,25 +29,39 @@ public class ExecuteTemplate {
     public static <T, S extends Statement> T execute(StatementProxy<S> statementProxy,
                                                      StatementCallback<T, S> statementCallback,
                                                      Object... args) throws SQLException {
+        //执行SQL
         return execute(null, statementProxy, statementCallback, args);
     }
 
+    /**
+     *
+     * @param sqlRecognizer sql识别器
+     * @param statementProxy
+     * @param statementCallback
+     * @param args
+     * @param <T>
+     * @param <S>
+     * @return
+     * @throws SQLException
+     */
     public static <T, S extends Statement> T execute(SQLRecognizer sqlRecognizer,
                                                      StatementProxy<S> statementProxy,
                                                      StatementCallback<T, S> statementCallback,
                                                      Object... args) throws SQLException {
-
+        // 判断是否在全局事务里
         if (!RootContext.inGlobalTransaction()) {
             // Just work as original statement
             return statementCallback.execute(statementProxy.getTargetStatement(), args);
         }
 
         if (sqlRecognizer == null) {
+            //根据具体的sql语句和DB 类型，获取 sql识别器
             sqlRecognizer = SQLVisitorFactory.get(
                     statementProxy.getTargetSQL(),
                     statementProxy.getConnectionProxy().getDbType());
         }
         Executor<T> executor = null;
+        // 根据sql类型，获取具体的sql执行器
         switch (sqlRecognizer.getSQLType()) {
             case INSERT:
                 executor = new InsertExecutor<T, S>(statementProxy, statementCallback, sqlRecognizer);
@@ -67,6 +81,11 @@ public class ExecuteTemplate {
         }
         T rs = null;
         try {
+
+            /**
+             * 调用父类BaseTransactionalExecutor 的execute方法执行 sql
+             * @see BaseTransactionalExecutor#execute(Object...)
+             */
             rs = executor.execute(args);
 
         } catch (Throwable ex) {

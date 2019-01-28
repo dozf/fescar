@@ -29,6 +29,12 @@ import com.alibaba.fescar.core.context.RootContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ *
+ * Dubbo Activate 扩展点
+ * 用 @Activate 来实现一些 Filter  其中对Dubbo服务提供方和消费方都激活(group 可选 provider 或 consumer)
+ *
+ */
 @Activate(group = { Constants.PROVIDER, Constants.CONSUMER }, order = 100)
 public class TransactionPropagationFilter implements Filter {
 
@@ -36,16 +42,20 @@ public class TransactionPropagationFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        //若是消费端（如：BusinessServiceImpl），xid 不为空
         String xid = RootContext.getXID();
+        //RpcContext(Dubbo 上下文信息)
+        //若是提供方(如：StorageServiceImpl),rpcXid不为空
         String rpcXid = RpcContext.getContext().getAttachment(RootContext.KEY_XID);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("xid in RootContext[" + xid + "] xid in RpcContext[" + rpcXid + "]");
         }
         boolean bind = false;
-        if (xid != null) {
+        if (xid != null) { //消费端
+            //消费端 远程调用之前，通过RpcContext上下文的attachment传KV给提供方
             RpcContext.getContext().setAttachment(RootContext.KEY_XID, xid);
         } else {
-            if (rpcXid != null) {
+            if (rpcXid != null) { //提供方
                 RootContext.bind(rpcXid);
                 bind = true;
                 if (LOGGER.isDebugEnabled()) {
@@ -57,7 +67,7 @@ public class TransactionPropagationFilter implements Filter {
             return invoker.invoke(invocation);
 
         } finally {
-            if (bind) {
+            if (bind) { //提供方调用完要解绑掉RootContext 中的xid信息
                 String unbindXid = RootContext.unbind();
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("unbind[" + unbindXid + "] from RootContext");

@@ -57,7 +57,8 @@ public class StorageServiceImpl implements StorageService {
         String applicationId = "dubbo-demo-storage-service";
         String txServiceGroup = "my_test_tx_group";
 
-        RMClientAT.init(applicationId, txServiceGroup);
+        //手动 注册AT模式的RM , 本例通过spring方式把 TM和RM 注册到TC。所以注释掉这里
+        // RMClientAT.init(applicationId, txServiceGroup);
 
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(new String[]{"dubbo-storage-service.xml"});
         context.getBean("service");

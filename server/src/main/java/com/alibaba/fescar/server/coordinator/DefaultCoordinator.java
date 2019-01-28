@@ -78,13 +78,18 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
         core.setResourceManagerInbound(this);
     }
 
+    // 处理全局事务开始的请求
     @Override
     protected void doGlobalBegin(GlobalBeginRequest request, GlobalBeginResponse response, RpcContext rpcContext)
         throws TransactionException {
+        /**
+        生成xid。 通过DefaultCore#begin方法生成一个全局会话GlobalSession，并把GlobalSession 交给 SessionManager 管理，最后根据GlobalSession的transactionId 生成xid
+         */
         response.setXid(core.begin(rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(),
             request.getTransactionName(), request.getTimeout()));
     }
 
+    // 处理全局事务提交的请求
     @Override
     protected void doGlobalCommit(GlobalCommitRequest request, GlobalCommitResponse response, RpcContext rpcContext)
         throws TransactionException {
@@ -92,6 +97,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
     }
 
+    // 处理全局事务回滚的请求
     @Override
     protected void doGlobalRollback(GlobalRollbackRequest request, GlobalRollbackResponse response,
                                     RpcContext rpcContext) throws TransactionException {
@@ -99,12 +105,14 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
     }
 
+    // 处理更改全局事务状态的请求
     @Override
     protected void doGlobalStatus(GlobalStatusRequest request, GlobalStatusResponse response, RpcContext rpcContext)
         throws TransactionException {
         response.setGlobalStatus(core.getStatus(XID.generateXID(request.getTransactionId())));
     }
 
+    // 处理注册分支事务的请求
     @Override
     protected void doBranchRegister(BranchRegisterRequest request, BranchRegisterResponse response,
                                     RpcContext rpcContext) throws TransactionException {
@@ -115,6 +123,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
     }
 
+    // 处理分支事务回复的请求
     @Override
     protected void doBranchReport(BranchReportRequest request, BranchReportResponse response, RpcContext rpcContext)
         throws TransactionException {
@@ -123,6 +132,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
     }
 
+    // 处理全局锁查询的请求
     @Override
     protected void doLockCheck(GlobalLockQueryRequest request, GlobalLockQueryResponse response, RpcContext rpcContext)
         throws TransactionException {
@@ -130,6 +140,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
             XID.generateXID(request.getTransactionId()), request.getLockKey()));
     }
 
+    // 分支事务提交
     @Override
     public BranchStatus branchCommit(String xid, long branchId, String resourceId, String applicationData)
         throws TransactionException {
@@ -154,6 +165,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
         }
     }
 
+    // 分支事务回滚
     @Override
     public BranchStatus branchRollback(String xid, long branchId, String resourceId, String applicationData)
         throws TransactionException {
@@ -248,6 +260,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
         }
     }
 
+    // 初始化处理4个周期任务的线程池
     private ScheduledThreadPoolExecutor retryRollbacking = new ScheduledThreadPoolExecutor(1,
         new NamedThreadFactory("RetryRollbacking", 1));
 
@@ -260,12 +273,16 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
     private ScheduledThreadPoolExecutor timeoutCheck = new ScheduledThreadPoolExecutor(1,
         new NamedThreadFactory("TxTimeoutCheck", 1));
 
+    /**
+     * 初始化4个周期任务
+     */
     public void init() {
         retryRollbacking.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
                 try {
+                    // 全局事务回滚
                     handleRetryRollbacking();
                 } catch (Exception e) {
                     LOGGER.info("Exception retry rollbacking ... ", e);
@@ -278,6 +295,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
             @Override
             public void run() {
                 try {
+                    // 全局事务提交
                     handleRetryCommitting();
                 } catch (Exception e) {
                     LOGGER.info("Exception retry committing ... ", e);
@@ -290,6 +308,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
             @Override
             public void run() {
                 try {
+                    // 全局事务异步提交
                     handleAsyncCommitting();
                 } catch (Exception e) {
                     LOGGER.info("Exception async committing ... ", e);
@@ -302,6 +321,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
             @Override
             public void run() {
                 try {
+                    //全局事务超时检测
                     timeoutCheck();
                 } catch (Exception e) {
                     LOGGER.info("Exception timeout checking ... ", e);
@@ -312,6 +332,8 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
     }
 
+
+    // 处理事务请求
     @Override
     public AbstractResultMessage onRequest(AbstractMessage request, RpcContext context) {
         if (!(request instanceof AbstractTransactionRequestToTC)) {
@@ -319,7 +341,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
         }
         AbstractTransactionRequestToTC transactionRequest = (AbstractTransactionRequestToTC)request;
         transactionRequest.setTCInboundHandler(this);
-
+        //由具体的事务请求(如： :GlobalBeginRequest、GlobalCommitRequest )进行处理
         return transactionRequest.handle(context);
     }
 

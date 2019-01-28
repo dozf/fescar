@@ -26,12 +26,21 @@ import com.alibaba.fescar.rm.datasource.DataSourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * AT模式 RM处理器
+ */
 public class RMHandlerAT extends AbstractRMHandlerAT implements RMInboundHandler, TransactionMessageHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RMHandlerAT.class);
 
     private DataSourceManager dataSourceManager = DataSourceManager.get();
 
+    /**
+     * 提交分支事务
+     * @param request
+     * @param response
+     * @throws TransactionException
+     */
     @Override
     protected void doBranchCommit(BranchCommitRequest request, BranchCommitResponse response) throws TransactionException {
         String xid = request.getXid();
@@ -45,6 +54,12 @@ public class RMHandlerAT extends AbstractRMHandlerAT implements RMInboundHandler
 
     }
 
+    /**
+     * 回滚分支事务
+     * @param request
+     * @param response
+     * @throws TransactionException
+     */
     @Override
     protected void doBranchRollback(BranchRollbackRequest request, BranchRollbackResponse response) throws TransactionException {
         String xid = request.getXid();

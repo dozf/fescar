@@ -245,6 +245,7 @@ public abstract class AbstractRpcRemoting extends ChannelDuplexHandler {
             }
         } else {
             ChannelFuture future;
+            // 检测 channel 是否可用
             channelWriteableCheck(channel, msg);
             future = channel.writeAndFlush(rpcMessage);
             future.addListener(new ChannelFutureListener() {

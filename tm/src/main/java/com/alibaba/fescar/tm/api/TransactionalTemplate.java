@@ -20,6 +20,7 @@ import com.alibaba.fescar.core.exception.TransactionException;
 
 /**
  * Template of executing business logic with a global transaction.
+ * 使用全局事务执行业务逻辑的模板
  */
 public class TransactionalTemplate {
 
@@ -33,10 +34,20 @@ public class TransactionalTemplate {
     public Object execute(TransactionalExecutor business) throws TransactionalExecutor.ExecutionException {
 
         // 1. get or create a transaction
+        /**
+         * 获取或创建一个全局事务(默认是DefaultGlobalTransaction,初始化时 状态是GlobalStatus.UnKnown,角色是事务发起者[GlobalTransactionRole.Launcher],xid 是null ) ，
+         * 并放入GlobalTransactionContext 上下文中
+         *
+         */
         GlobalTransaction tx = GlobalTransactionContext.getCurrentOrCreate();
 
         // 2. begin transaction
         try {
+            /**
+             * 调用DefaultGlobalTransaction开启全局事务 (由DefaultTransactionManager，通过TmRpcClient 发送GlobalBeginRequest 给TC ,同时会返回xid，格式："ip : port : tranId" ,如：172.20.21.167:8091:1785900)
+             * GlobalTransaction 状态设置为GlobalStatus.Begin
+             * xid 绑定到RootContext
+             */
             tx.begin(business.timeout(), business.name());
 
         } catch (TransactionException txe) {
@@ -49,12 +60,14 @@ public class TransactionalTemplate {
         try {
 
             // Do Your Business
+            // 执行业务的原始方法，由于集成的是Dubbo,原始方法调用其他服务时会经过 TransactionPropagationFilter把xid 传递到其他服务。
             rs = business.execute();
 
         } catch (Throwable ex) {
 
             // 3. any business exception, rollback.
             try {
+                //全局事务异常回滚
                 tx.rollback();
 
                 // 3.1 Successfully rolled back
@@ -71,6 +84,7 @@ public class TransactionalTemplate {
 
         // 4. everything is fine, commit.
         try {
+            //全局事务提交
             tx.commit();
 
         } catch (TransactionException txe) {

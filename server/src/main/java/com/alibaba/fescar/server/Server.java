@@ -33,6 +33,7 @@ public class Server {
             new LinkedBlockingQueue(20000), new ThreadPoolExecutor.CallerRunsPolicy());
 
     public static void main(String[] args) throws IOException {
+        //1、创建 一个netty 服务端
         RpcServer rpcServer = new RpcServer(WORKING_THREADS);
         
         int port = 8091;
@@ -54,17 +55,32 @@ public class Server {
         if (args.length > 1) {
             dataDir = args[1];
         }
+        //根据路径初始化会话持有者
         SessionHolder.init(dataDir);
 
+        //2、创建一个默认的事务协调器
         DefaultCoordinator coordinator = new DefaultCoordinator(rpcServer);
         coordinator.init();
+        /**
+         里面会初始化四个周期任务：
+         RetryRollbacking：
+         RetryCommitting
+         AsyncCommitting
+         TxTimeoutCheck ： 全局事务超时检测
+         */
+
+
+        //3、给rpcServer设置一个TransactionMessageHandler（rpc 事务消息处理器）
         rpcServer.setHandler(new DefaultCoordinator(rpcServer));
 
+        //4、初始化UUID（根据服务节点），后期用于生成 transactionId(在构建GlobalSession时)
         UUIDGenerator.init(1);
 
+        //XID 生成器设置
         XID.setIpAddress(NetUtil.getLocalIp());
         XID.setPort(rpcServer.getListenPort());
 
+        //5、初始化和启动 rpcServer（netty 服务端）
         rpcServer.init();
 
         System.exit(0);

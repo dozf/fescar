@@ -19,6 +19,7 @@ package com.alibaba.fescar.rm.datasource.exec;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.alibaba.fescar.rm.datasource.ConnectionProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,18 +38,25 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
 
     @Override
     public T doExecute(Object... args) throws Throwable {
+        //获取代理连接
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         if (connectionProxy.getAutoCommit()) {
+            // 按自动提交方式执行SQL
             return executeAutoCommitTrue(args);
         } else {
+            // 按非自动提交方式执行SQL
             return executeAutoCommitFalse(args);
         }
     }
 
     protected T executeAutoCommitFalse(Object[] args) throws Throwable {
+        // 构建sql 执行前的镜像
         TableRecords beforeImage = beforeImage();
+        // 执行sql
         T result = statementCallback.execute(statementProxy.getTargetStatement(), args);
+        // 构建sql 执行后的镜像
         TableRecords afterImage = afterImage(beforeImage);
+        // 解析成undolog,并把内容插入undo_log表， 详见：com.alibaba.fescar.rm.datasource.ConnectionProxy.prepareUndoLog()
         statementProxy.getConnectionProxy().prepareUndoLog(sqlRecognizer.getSQLType(), sqlRecognizer.getTableName(), beforeImage, afterImage);
         return result;
     }
@@ -58,10 +66,16 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         LockRetryController lockRetryController = new LockRetryController();
         try {
+            //设置成不自动提交
             connectionProxy.setAutoCommit(false);
             while (true) {
                 try {
+                    // 按非自动提交方式执行SQL
                     result = executeAutoCommitFalse(args);
+                    /**
+                     * 提交本地事务
+                     * @see  ConnectionProxy#commit()
+                     */
                     connectionProxy.commit();
                     break;
                 } catch (LockConflictException lockConflict) {
@@ -75,6 +89,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
             throw e;
         } 
         finally {
+            //设置成自动提交
             connectionProxy.setAutoCommit(true);
         }
         return result;

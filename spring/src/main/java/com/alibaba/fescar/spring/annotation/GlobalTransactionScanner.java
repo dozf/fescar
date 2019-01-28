@@ -147,6 +147,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator implement
             throw new IllegalArgumentException(
                 "applicationId: " + applicationId + ", txServiceGroup: " + txServiceGroup);
         }
+        // 注册TM
         TMClient.init(applicationId, txServiceGroup);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info(
@@ -154,6 +155,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator implement
                     + txServiceGroup + "]");
         }
         if ((AT_MODE & mode) > 0) {
+            // 注册AT模式的RM
             RMClientAT.init(applicationId, txServiceGroup);
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info(

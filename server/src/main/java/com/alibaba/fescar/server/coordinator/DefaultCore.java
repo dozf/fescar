@@ -35,6 +35,9 @@ import org.slf4j.LoggerFactory;
 
 import static com.alibaba.fescar.core.exception.TransactionExceptionCode.*;
 
+/**
+ * TC 的默认核心处理类
+ */
 public class DefaultCore implements Core {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCore.class);
@@ -48,10 +51,21 @@ public class DefaultCore implements Core {
         this.resourceManagerInbound = resourceManagerInbound;
     }
 
+    /**
+     * 分支事务注册处理
+     * @param branchType
+     * @param resourceId
+     * @param clientId
+     * @param xid
+     * @param lockKeys
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid, String lockKeys) throws TransactionException {
         GlobalSession globalSession = assertGlobalSession(XID.getTransactionId(xid), GlobalStatus.Begin);
 
+        //分支会话
         BranchSession branchSession = new BranchSession();
         branchSession.setTransactionId(XID.getTransactionId(xid));
         branchSession.setBranchId(UUIDGenerator.generateUUID());
@@ -62,6 +76,7 @@ public class DefaultCore implements Core {
         branchSession.setLockKey(lockKeys);
         branchSession.setClientId(clientId);
 
+        //获取全局事务锁(注意：是全局锁)
         if (!branchSession.lock()) {
             throw new TransactionException(LockKeyConflict);
         }
@@ -74,6 +89,13 @@ public class DefaultCore implements Core {
         return branchSession.getBranchId();
     }
 
+    /**
+     * 获取全局会话
+     * @param transactionId
+     * @param status
+     * @return
+     * @throws TransactionException
+     */
     private GlobalSession assertGlobalSession(long transactionId, GlobalStatus status) throws TransactionException {
         GlobalSession globalSession = SessionHolder.findGlobalSession(transactionId);
         if (globalSession == null) {
@@ -111,14 +133,25 @@ public class DefaultCore implements Core {
 
     }
 
+    /**
+     * 开始全局事务
+     * @param applicationId ID of the application who begins this transaction.
+     * @param transactionServiceGroup ID of the transaction service group.
+     * @param name Give a name to the global transaction.
+     * @param timeout Timeout of the global transaction.
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout) throws TransactionException {
+        //创建一个全局会话
         GlobalSession session = GlobalSession.createGlobalSession(
                 applicationId, transactionServiceGroup, name, timeout);
+        //设置全局会话的生命监听器 RootSessionManager
         session.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
-
+        // 把全局会话交给 SessionManager 管理
         session.begin();
-
+        // 返回全局事务的xid 。格式: "ip : port : tranId" (如：172.20.21.167:8091:1785900)
         return XID.generateXID(session.getTransactionId());
     }
 
@@ -143,6 +176,12 @@ public class DefaultCore implements Core {
         return globalSession.getStatus();
     }
 
+    /**
+     * 全局事务提交
+     * @param globalSession
+     * @param retrying
+     * @throws TransactionException
+     */
     @Override
     public void doGlobalCommit(GlobalSession globalSession, boolean retrying) throws TransactionException {
         for (BranchSession branchSession : globalSession.getSortedBranches()) {

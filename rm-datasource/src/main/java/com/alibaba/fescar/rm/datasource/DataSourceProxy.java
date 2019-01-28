@@ -37,7 +37,8 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
     }
 
     private void assertManaged() {
-        if (!managed) {
+        if (!managed) {//
+            // 注册RM
             DataSourceManager.get().registerResource(this);
             managed = true;
         }
@@ -53,7 +54,7 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
 
     @Override
     public ConnectionProxy getConnection() throws SQLException {
-        assertManaged();
+        assertManaged(); // 判断连接是否被管理
         Connection targetConnection = targetDataSource.getConnection();
         return new ConnectionProxy(this, targetConnection, targetDataSource.getDbType());
     }

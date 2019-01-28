@@ -120,14 +120,29 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
     }
 
     /**
+     * com.alibaba.fescar.server.Server #main 方法里调用
      * Init.
      */
     @Override
     public void init() {
         super.init();
         setChannelHandlers(RpcServer.this);
+        /**
+         * 维护的TransactionMessageHandler（com.alibaba.fescar.server.Server 初始化时设置的DefaultCoordinator） 监听器里有处理各种消息的方法：
+            onRegRmMessage (处理注册RM的消息)
+            onRegTmMessage (处理注册TM的消息)
+            onCheckMessage (处理心跳检测的消息)
+            onTrxMessage(处理事务消息):里面会调用TransactionMessageHandler(由上面可知是DefaultCoordinator类) 来处理消息，具体会根据请求类型进行处理
+                GlobalBeginRequest ：事务开始请求
+                GlobalCommitRequest：事务提交请求
+                GlobalRollbackRequest：事务回滚请求
+                ....
+                这些请求最终调用com.alibaba.fescar.server.AbstractTCInboundHandler(DefaultCoordinator的父类) 里的handle 方法处理，最后到DefaultCoordinator相应的方法
+
+         */
         DefaultServerMessageListenerImpl defaultServerMessageListenerImpl = new DefaultServerMessageListenerImpl(
             transactionMessageHandler);
+        //维护的ServerMessageSender是RpcServer实例
         defaultServerMessageListenerImpl.setServerMessageSender(this);
         this.setServerMessageListener(defaultServerMessageListenerImpl);
         super.start();
@@ -152,6 +167,7 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
+            // 心跳检测
             debugLog("idle:" + evt);
             IdleStateEvent idleStateEvent = (IdleStateEvent)evt;
             if (idleStateEvent.state() == IdleState.READER_IDLE) {
@@ -240,7 +256,7 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
     }
 
     /**
-     * Dispatch.
+     * Dispatch.  分发RPC 消息
      *
      * @param msgId the msg id
      * @param ctx   the ctx
@@ -248,7 +264,12 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
      */
     @Override
     public void dispatch(long msgId, ChannelHandlerContext ctx, Object msg) {
+        // 注册TM 请求
         if (msg instanceof RegisterRMRequest) {
+            /**
+             * 通过DefaultServerMessageListenerImpl#onRegRmMessage 处理 注册TM 请求
+             * @see DefaultServerMessageListenerImpl#onRegRmMessage(long, io.netty.channel.ChannelHandlerContext, com.alibaba.fescar.core.protocol.RegisterRMRequest, com.alibaba.fescar.core.rpc.ServerMessageSender, com.alibaba.fescar.core.rpc.netty.RegisterCheckAuthHandler)
+             */
             serverMessageListener.onRegRmMessage(msgId, ctx, (RegisterRMRequest)msg, this,
                 checkAuthHandler);
         } else {
@@ -302,7 +323,7 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
     }
 
     /**
-     * Channel read.
+     * Channel read. 接收客户端消息
      *
      * @param ctx the ctx
      * @param msg the msg
@@ -325,6 +346,11 @@ public class RpcServer extends AbstractRpcRemotingServer implements ServerMessag
                 return;
             }
         }
+
+         /**
+         *  //使用父类的channelRead 方法 接收客户端消息, 最后会调用本类的dispatch 方法
+         *  @see RpcServer#dispatch(long, io.netty.channel.ChannelHandlerContext, java.lang.Object)
+         */
         super.channelRead(ctx, msg);
     }
 

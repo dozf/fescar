@@ -148,19 +148,27 @@ public class ChannelManager {
     public static void registerRMChannel(RegisterRMRequest resourceManagerRequest, Channel channel)
         throws IncompatibleVersionException {
         Version.checkVersion(resourceManagerRequest.getVersion());
+        //获取resourceManagerRequest 中的 resourceIds ,转成set
         Set<String> dbkeySet = dbKeytoSet(resourceManagerRequest.getResourceIds());
         RpcContext rpcContext;
+        LOGGER.info(resourceManagerRequest.getApplicationId() + " 注册RM channel时对应的资源："+resourceManagerRequest.getResourceIds());
+        // IDENTIFIED_CHANNELS 维护的是 rm（对应的netty客户端)的channel --->  RpcContext
         if (!IDENTIFIED_CHANNELS.containsKey(channel)) {
+            // 构建RPC上下文 RpcContext(注意，不是Dubbo中的RpcContext)
             rpcContext = buildChannelHolder(TransactionRole.RMROLE, resourceManagerRequest.getVersion(),
                 resourceManagerRequest.getApplicationId(), resourceManagerRequest.getTransactionServiceGroup(),
                 resourceManagerRequest.getResourceIds(), channel);
             rpcContext.holdInIdentifiedChannels(IDENTIFIED_CHANNELS);
         } else {
+
             rpcContext = IDENTIFIED_CHANNELS.get(channel);
+            LOGGER.info(channel+ " ===========1===========原来对应的资源："+rpcContext.getResourceSets());
             rpcContext.addResources(dbkeySet);
+            LOGGER.info(channel+ " ============2==========修改后对应的资源："+rpcContext.getResourceSets());
         }
         if (null == dbkeySet || dbkeySet.isEmpty()) { return; }
         for (String resourceId : dbkeySet) {
+            // RM_CHANNELS 维护的  resourceId -> applicationId -> ip -> port -> RpcContext
             RM_CHANNELS.putIfAbsent(resourceId,
                 new ConcurrentHashMap<String, ConcurrentMap<String, ConcurrentMap<Integer, RpcContext>>>());
             ConcurrentMap<String, ConcurrentMap<String, ConcurrentMap<Integer, RpcContext>>> applicationIdMap
@@ -169,10 +177,12 @@ public class ChannelManager {
                 new ConcurrentHashMap<String, ConcurrentMap<Integer, RpcContext>>());
             ConcurrentMap<String, ConcurrentMap<Integer, RpcContext>> clientIpMap = applicationIdMap.get(
                 resourceManagerRequest.getApplicationId());
+            //根据channel 获取ip
             String clientIp = getClientIpFromChannel(channel);
             clientIpMap.putIfAbsent(clientIp, new ConcurrentHashMap<Integer, RpcContext>());
             ConcurrentMap<Integer, RpcContext> portMap = clientIpMap.get(clientIp);
             rpcContext.holdInResourceManagerChannels(resourceId, portMap);
+            //更新Channel中的资源(目前是数据库)
             updateChannelsResource(resourceId, clientIp, resourceManagerRequest.getApplicationId());
         }
 

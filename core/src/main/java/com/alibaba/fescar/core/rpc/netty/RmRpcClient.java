@@ -150,6 +150,7 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
             timerExecutor.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
+                    // 周期重连
                     reconnect();
                 }
             }, SCHEDULE_INTERVAL_MILLS, SCHEDULE_INTERVAL_MILLS, TimeUnit.SECONDS);
@@ -248,6 +249,12 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
         return sendMsgWithResponse(msg, NettyClientConfig.getRpcRequestTimeout());
     }
 
+
+    /**
+     * 心跳检测
+     * @param ctx
+     * @param evt
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
@@ -266,6 +273,7 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
             }
             if (idleStateEvent == IdleStateEvent.WRITER_IDLE_STATE_EVENT) {
                 try {
+                    // 定时发送ping 消息，告诉netty服务器(TC---事务协调器)，自己还活着
                     sendRequest(ctx.channel(), HeartbeatMessage.PING);
                 } catch (Throwable throwable) {
                     LOGGER.error("", "send request error", throwable);
@@ -304,10 +312,17 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
         }
     }
 
+    /**
+     * 获取连接到TC(事务协调器) 的 channel
+     * @param serverAddress the server address
+     * @return
+     */
     @Override
     protected Channel connect(String serverAddress) {
+        //获取连接到TC(事务协调器) 的 channel
         Channel channelToServer = channels.get(serverAddress);
         if (channelToServer != null) {
+            // 判断 channel 是否可用
             channelToServer = getExistAliveChannel(channelToServer, serverAddress);
             if (null != channelToServer) {
                 return channelToServer;
@@ -337,6 +352,7 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
         }
         Channel channelFromPool = null;
         try {
+            //
             String resourceIds = customerKeys == null ? getMergedResourceKeys(resourceManager) : customerKeys;
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("RM will register :" + resourceIds);
@@ -351,6 +367,11 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
                 message = (RegisterRMRequest)poolKeyMap.get(serverAddress).getMessage();
                 message.setResourceIds(resourceIds);
             }
+            /**
+             从nettyClientKeyPool 根据serverAddress 获取一个 Channel ，
+             没有serverAddress对应的Channel时，用
+             @see NettyPoolableFactory#makeObject 创建一个对应的Channel(连接到TC 的netty服务端的Channel)
+             */
             channelFromPool = nettyClientKeyPool.borrowObject(poolKeyMap.get(serverAddress));
         } catch (Exception exx) {
             LOGGER.error(FrameworkErrorCode.RegistRM.errCode, "register RM failed.", exx);
@@ -475,6 +496,7 @@ public final class RmRpcClient extends AbstractRpcRemotingClient {
                     + ",channel:" + channel);
         }
         if (customerKeys == null) {
+            //channels 维护上连接到TC 的 channel
             synchronized (channels) {
                 channels.put(serverAddress, channel);
             }

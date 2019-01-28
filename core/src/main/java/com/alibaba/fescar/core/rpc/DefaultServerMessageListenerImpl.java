@@ -61,6 +61,13 @@ public class DefaultServerMessageListenerImpl implements ServerMessageListener {
         this.transactionMessageHandler = transactionMessageHandler;
     }
 
+    /**
+     * 处理事务消息
+     * @param msgId   the msg id
+     * @param ctx     the ctx
+     * @param message the message
+     * @param sender  the sender
+     */
     @Override
     public void onTrxMessage(long msgId, ChannelHandlerContext ctx, Object message, ServerMessageSender sender) {
         RpcContext rpcContext = ChannelManager.getContextFromIdentified(ctx.channel());
@@ -88,6 +95,14 @@ public class DefaultServerMessageListenerImpl implements ServerMessageListener {
         }
     }
 
+    /**
+     * 处理注册RM消息
+     * @param msgId            the msg id
+     * @param ctx              the ctx
+     * @param message          the message
+     * @param sender           the sender
+     * @param checkAuthHandler the check auth handler
+     */
     @Override
     public void onRegRmMessage(long msgId, ChannelHandlerContext ctx, RegisterRMRequest message,
                                ServerMessageSender sender, RegisterCheckAuthHandler checkAuthHandler) {
@@ -96,6 +111,7 @@ public class DefaultServerMessageListenerImpl implements ServerMessageListener {
         try {
             if (null == checkAuthHandler || null != checkAuthHandler && checkAuthHandler.regResourceManagerCheckAuth(
                 message)) {
+                // 根据RegisterRMRequest 信息为对应的RM 注册 channel
                 ChannelManager.registerRMChannel(message, ctx.channel());
                 Version.putChannelVersion(ctx.channel(), message.getVersion());
                 isSuccess = true;
@@ -110,6 +126,14 @@ public class DefaultServerMessageListenerImpl implements ServerMessageListener {
         }
     }
 
+    /**
+     * 处理注册TM消息
+     * @param msgId            the msg id
+     * @param ctx              the ctx
+     * @param message          the message
+     * @param sender           the sender
+     * @param checkAuthHandler the check auth handler
+     */
     @Override
     public void onRegTmMessage(long msgId, ChannelHandlerContext ctx, RegisterTMRequest message,
                                ServerMessageSender sender, RegisterCheckAuthHandler checkAuthHandler) {

@@ -30,14 +30,24 @@ import io.netty.util.internal.ConcurrentSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 默认全局锁管理器
+ */
 public class DefaultLockManagerImpl implements LockManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultLockManagerImpl.class);
 
+    //用于实现分段锁
     private static final int BUCKET_PER_TABLE = 128;
 
     private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ConcurrentHashMap<Integer, Map<String, Long>>>> LOCK_MAP = new ConcurrentHashMap<String, ConcurrentHashMap<String, ConcurrentHashMap<Integer, Map<String, Long>>>>();
 
+    /**
+     * 获取全局锁
+     * @param branchSession
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public boolean acquireLock(BranchSession branchSession) throws TransactionException {
         String resourceId = branchSession.getResourceId();
@@ -48,7 +58,8 @@ public class DefaultLockManagerImpl implements LockManager {
             dbLockMap = LOCK_MAP.get(resourceId);
         }
         ConcurrentHashMap<Map<String, Long>, Set<String>> bucketHolder = branchSession.getLockHolder();
-        
+
+        // 全局锁key，格式：( 表名：主键值， 如：storage_tbl:15，即storage_tbl 中id是15的记录）
         String lockKey = branchSession.getLockKey();
         if(StringUtils.isEmpty(lockKey)) {
             return true;
@@ -68,6 +79,7 @@ public class DefaultLockManagerImpl implements LockManager {
                 dbLockMap.putIfAbsent(tableName, new ConcurrentHashMap<Integer, Map<String, Long>>());
                 tableLockMap = dbLockMap.get(tableName);
             }
+            // 主键集合，如{"15"}
             String[] pks = mergedPKs.split(",");
             for (String pk : pks) {
                 int bucketId = pk.hashCode() % BUCKET_PER_TABLE;
@@ -102,6 +114,14 @@ public class DefaultLockManagerImpl implements LockManager {
         return true;
     }
 
+    /**
+     * 查询资源是否被锁住
+     * @param transactionId
+     * @param resourceId
+     * @param lockKey
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public boolean isLockable(long transactionId, String resourceId, String lockKey) throws TransactionException {
         ConcurrentHashMap<String, ConcurrentHashMap<Integer, Map<String, Long>>> dbLockMap = LOCK_MAP.get(resourceId);

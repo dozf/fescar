@@ -60,6 +60,7 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<NettyPoo
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("NettyPool create channel to " + key);
         }
+        // 创建一个连接到TC 的netty服务端的Channel
         Channel tmpChannel = rpcRemotingClient.getNewChannel(address);
         long start = System.currentTimeMillis();
         Object response = null;

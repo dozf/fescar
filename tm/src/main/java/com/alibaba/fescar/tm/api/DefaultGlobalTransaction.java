@@ -41,8 +41,14 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     private String xid;
 
+    /**
+     * 默认是未知
+     */
     private GlobalStatus status = GlobalStatus.UnKnown;
 
+    /**
+     * 默认是事务发起者
+     */
     private GlobalTransactionRole role = GlobalTransactionRole.Launcher;
 
     /**
