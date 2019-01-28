@@ -82,6 +82,12 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         begin(timeout, DEFAULT_GLOBAL_TX_NAME);
     }
 
+    /**
+     * 全局事务开启
+     * @param timeout Given timeout in MILLISECONDS.
+     * @param name    Given name.
+     * @throws TransactionException
+     */
     @Override
     public void begin(int timeout, String name) throws TransactionException {
         if (xid == null && role == GlobalTransactionRole.Launcher) {
@@ -97,6 +103,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     }
 
+    /**
+     * 全局事务提交
+     * @throws TransactionException
+     */
     @Override
     public void commit() throws TransactionException {
         check();
@@ -109,6 +119,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     }
 
+    /**
+     * 全局事务回滚
+     * @throws TransactionException
+     */
     @Override
     public void rollback() throws TransactionException {
         check();
