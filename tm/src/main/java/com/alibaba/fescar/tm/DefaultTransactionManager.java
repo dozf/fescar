@@ -75,6 +75,12 @@ public class DefaultTransactionManager implements TransactionManager {
         return response.getGlobalStatus();
     }
 
+    /**
+     * 事务回滚
+     * @param xid XID of the global transaction
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public GlobalStatus rollback(String xid) throws TransactionException {
         long txId = XID.getTransactionId(xid);

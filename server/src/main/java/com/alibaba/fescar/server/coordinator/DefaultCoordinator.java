@@ -179,7 +179,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler
 
             GlobalSession globalSession = SessionHolder.findGlobalSession(XID.getTransactionId(xid));
             BranchSession branchSession = globalSession.getBranch(branchId);
-
+            // 向具体的RM client 发送回滚请求
             BranchRollbackResponse response = (BranchRollbackResponse)messageSender.sendSyncRequest(resourceId,
                 branchSession.getClientId(), request);
             return response.getBranchStatus();

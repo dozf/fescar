@@ -68,7 +68,7 @@ public class TransactionalTemplate {
 
             // 3. any business exception, rollback.
             try {
-                //全局事务异常回滚
+                //发起全局事务异常回滚
                 tx.rollback();
 
                 // 3.1 Successfully rolled back

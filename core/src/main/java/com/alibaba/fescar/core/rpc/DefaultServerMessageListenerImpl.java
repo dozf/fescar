@@ -85,6 +85,7 @@ public class DefaultServerMessageListenerImpl implements ServerMessageListener {
             AbstractResultMessage[] results = new AbstractResultMessage[((MergedWarpMessage)message).msgs.size()];
             for (int i = 0; i < results.length; i++) {
                 final AbstractMessage subMessage = ((MergedWarpMessage)message).msgs.get(i);
+                // transactionMessageHandler (DefaultCoordinator) 处理具体的事务请求(如： :GlobalBeginRequest、GlobalCommitRequest、GlobalRollbackRequest )
                 results[i] = transactionMessageHandler.onRequest(subMessage, rpcContext);
             }
             MergeResultMessage resultMessage = new MergeResultMessage();

@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 合并后的包装信息
  * @Author: jimin.jm@alibaba-inc.com
  * @Project: fescar-all
  * @DateTime: 2018/10/9 16:55

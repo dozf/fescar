@@ -256,6 +256,11 @@ public class DefaultCore implements Core {
         globalSession.changeStatus(GlobalStatus.CommitRetrying);
     }
 
+    /**
+     * 放到队列里重试回滚
+     * @param globalSession
+     * @throws TransactionException
+     */
     private void queueToRetryRollback(GlobalSession globalSession) throws TransactionException {
         globalSession.addSessionLifecycleListener(SessionHolder.getRetryRollbackingSessionManager());
         SessionHolder.getRetryRollbackingSessionManager().addGlobalSession(globalSession);
@@ -267,6 +272,12 @@ public class DefaultCore implements Core {
         }
     }
 
+    /**
+     * 根据XID 回滚全局事务
+     * @param xid XID of the global transaction
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public GlobalStatus rollback(String xid) throws TransactionException {
         GlobalSession globalSession = SessionHolder.findGlobalSession(XID.getTransactionId(xid));
@@ -293,6 +304,7 @@ public class DefaultCore implements Core {
                 continue;
             }
             try {
+                // 回滚分支事务(通过DefaultCoordinator.branchRollback)
                 BranchStatus branchStatus = resourceManagerInbound.branchRollback(XID.generateXID(branchSession.getTransactionId()), branchSession.getBranchId(),
                         branchSession.getResourceId(), branchSession.getApplicationData());
 
