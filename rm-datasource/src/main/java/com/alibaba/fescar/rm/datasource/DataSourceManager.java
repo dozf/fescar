@@ -56,6 +56,7 @@ public class DataSourceManager implements ResourceManager {
             // RM客户端向TC 发送 分支事务注册消息
             BranchRegisterResponse response = (BranchRegisterResponse) RmRpcClient.getInstance().sendMsgWithResponse(request);
             if (response.getResultCode() == ResultCode.Failed) {
+                // 封装异常码
                 throw new TransactionException(response.getTransactionExceptionCode(), "Response[" + response.getMsg() + "]");
             }
             return response.getBranchId();

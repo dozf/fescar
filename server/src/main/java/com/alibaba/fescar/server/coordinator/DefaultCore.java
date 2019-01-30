@@ -78,6 +78,7 @@ public class DefaultCore implements Core {
 
         //获取全局事务锁(注意：是全局锁)
         if (!branchSession.lock()) {
+            //抛出锁冲突异常
             throw new TransactionException(LockKeyConflict);
         }
         try {
